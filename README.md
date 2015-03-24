@@ -11,48 +11,40 @@ var graph = DonutGraph.create(document.getElementById('svg'));
 var values = [
 	{
 		value: 1,
-		label: 'Nutrition',
 		color: '#FF9000',
 		active: true
 	},
 	{
 		value: 1,
-		label: 'Sommeil',
 		color: '#A29AC1',
 		disabled: true,
 		active: true
 	},
 	{
 		value: 1,
-		label: 'Acitivité Physique',
 		color: '#3DABAC',
 		disabled: true
 	},
 	{
 		value: 1,
-		label: 'Corpulence',
 		color: '#48C5F5',
 		active: true
 	},
 	{
 		value: 1,
-		label: 'Addiction',
 		color: '#FE6152'
 	},
 	{
 		value: 1,
-		label: 'Santé',
 		color: '#70B864',
 		active: true
 	},
 	{
 		value: 1,
-		label: 'Emotionelle',
 		color: '#823D7E'
 	},
 	{
 		value: 1,
-		label: 'Suivi médical',
 		color: '#FDC24E'
 	}
 ];
