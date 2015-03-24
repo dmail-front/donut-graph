@@ -1,12 +1,48 @@
-# donut-graph
+<!doctype html>
 
-Under dev
+<html>
+<head>
+	<title>Donut chart</title>
+	<script src="util.js"></script>
+	<script src="donut.js"></script>
+</head>
 
-## Example
+<body>
 
-`<div style="width:200px;height:200px"><svg id="svg"></svg></div>`
+<style>
+#donut-container{
+	width: 100%;
+	text-align: center;
+	height: 200px;
+	vertical-align: top;
+}
 
-```javascript
+#donut{
+	display: inline-block;
+	width: 30%;
+	border: 1px solid blue;
+	padding-bottom: 30%;
+	position: relative;
+}
+
+#donut>svg{
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+
+#donut path:hover{
+	opacity: 0.6;
+}
+</style>
+
+<div id="donut-container">
+	<div id="donut">
+		<svg id="svg"></svg>
+	</div>
+</div>
+
+<script>
 var graph = DonutGraph.create(document.getElementById('svg'));
 var values = [
 	{
@@ -58,44 +94,8 @@ var values = [
 ];
 graph.setValues(values);
 graph.draw();
-```
+</script>
 
-![donutgraph sample](./sample.jpg)
+</body>
 
-## properties
-
-```javascript
-{
-	size: 100, // relative size of the graph, no need to change this
-	padding: 0, // space around the donut
-
-	outerCircle: {
-		backgroundOpacity: 0
-	},
-	innerCircle: {
-		backgroundOpacity: 0
-	},
-	arc: {
-		size: 15,
-		borderWidth: 1,
-		borderColor: '#F6F6F6'
-	},
-	disabledArc: {
-		backgroundColor: '#DCE6E7',
-	},
-	activedArc: {
-		innerMove: 0,
-		outerMove: 5
-	}
-}
-```
-
-## methods
-
-- create()
-- setValues(values)
-- activeArc(index)
-- unactiveArc(index)
-- enableArc(index)
-- disableArc(index)
-- draw()
+</html>
