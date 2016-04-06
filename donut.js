@@ -128,8 +128,8 @@ SVGDoc.register('image', {
 var DonutGraph = {
 	padding: 0,
 	size: 100, // beware touching this
-	iconSize: 8, // icon size relative to graph size
-	arcSize: 15, // arc size relative to graph size
+	iconSize: 10, // icon size relative to graph size
+	arcSize: 20, // arc size relative to graph size
 
 	outerCircle: {},
 	innerCircle: {},
@@ -255,8 +255,8 @@ var DonutGraph = {
 	createIconContainers: function(){
 		var availableRadius = this.outerCircle.radius - this.innerCircle.radius;
 	 	var iconSize = this.iconSize;
-	 	var iconX = this.size / 2 - iconSize / 2;
-	 	var iconY = availableRadius - iconSize / 2;
+	 	var iconX = this.size / 2 - iconSize / 2 - this.arc.borderWidth * 2;
+	 	var iconY = availableRadius - iconSize / 2 - this.arc.borderWidth * 2;
 
 		this.iconContainers = this.parts.map(function(part, index){
 			var use = this.svg.createElement('use', {
@@ -267,7 +267,7 @@ var DonutGraph = {
 			});
 
 			use.element.setAttributeNS(
-				"http://www.w3.org/1999/xlink",
+				'http://www.w3.org/1999/xlink',
 				'xlink:href',
 				'#icon-' + index
 			);
