@@ -1,9 +1,3 @@
-function assign(element, attrs){
-	for(var attr in attrs){
-		element.setAttribute(attr, attrs[attr]);
-	}
-}
-
 var SVGDoc = {
 	elements: {},
 	ns: 'http://www.w3.org/2000/svg',
@@ -12,13 +6,19 @@ var SVGDoc = {
 		this.element = element || document.createElementNS(this.ns, 'svg');
 
 		// https://github.com/wout/svg.js/blob/master/src/doc.js#L15
-		assign(this.element, {
+		this.assign({
 			x: 0,
 			y: 0,
 			xmlns: this.ns,
 			'xmlns:xlink': 'http://www.w3.org/1999/xlink',
 			version: '1.1'
 		});
+	},
+
+	assign: function(attrs){
+		for(var attr in attrs){
+			this.element.setAttribute(attr, attrs[attr]);
+		}
 	},
 
 	register: function(name, proto){
@@ -44,10 +44,18 @@ var SVGShape = {
 		'borderOpacity': 'stroke-opacity',
 		'backgroundOpacity': 'fill-opacity',
 		'opacity': 'opacity',
-		'x': 'cx',
-		'y': 'cy',
+		'cx': 'cx',
+		'cy': 'cy',
 		'radius': 'r',
-		'path': 'd'
+		'path': 'd',
+		'transform': 'transform',
+		'x': 'x',
+		'y': 'y',
+		'width': 'width',
+		'height': 'height',
+		'xlink:href': 'xlink:href',
+		'id': 'id',
+		'viewBox': 'viewBox'
 	},
 
 	constructor: function(svgDocument, properties){
@@ -59,6 +67,14 @@ var SVGShape = {
 	toElement: function(){
 		var element = document.createElementNS(this.svgDocument.ns, this.name);
 		return element;
+	},
+
+	setAttribute: function(name, value){
+		this.element.setAttribute(name, value);
+	},
+
+	removeAttribute: function(name){
+		this.element.removeAttribute(name);
 	},
 
 	update: function(key, value){
@@ -75,62 +91,202 @@ var SVGShape = {
 	}
 };
 
-var Circle = SVGDoc.register('circle', {
-	x: 0,
-	y: 0,
+SVGDoc.register('circle', {
+	cx: 0,
+	cy: 0,
 	radius: 0
 });
 
-var Path = SVGDoc.register('path', {
-	path: null
+SVGDoc.register('path', {
+
 });
 
-var Group = SVGDoc.register('g', {});
+SVGDoc.register('g', {
+
+});
+
+SVGDoc.register('a', {
+
+});
+
+SVGDoc.register('rect', {
+
+});
+
+SVGDoc.register('use', {
+
+});
+
+SVGDoc.register('symbol', {
+
+});
+
+SVGDoc.register('image', {
+
+});
 
 var DonutGraph = {
 	padding: 0,
 	size: 100, // beware touching this
+	iconSize: 8, // icon size relative to graph size
+	arcSize: 15, // arc size relative to graph size
 
-	outerCircle: {
-		backgroundOpacity: 0
-	},
-	innerCircle: {
-		backgroundOpacity: 0
-	},
-	arc: {
-		size: 15,
-		borderWidth: 1,
-		borderColor: '#F6F6F6'
-	},
-	disabledArc: {
-		backgroundColor: '#DCE6E7',
-	},
-	activedArc: {
-		innerMove: 0,
-		outerMove: 5
-	},
+	outerCircle: {},
+	innerCircle: {},
+	arc: {borderWidth: 1},
+	disabledArc: {},
+	activedArc: {innerMove: 0, outerMove: 5},
 
-	constructor: function(svg){
-		this.svg = SVGDoc.create(svg);
+	constructor: function(parent){
+		this.svg = SVGDoc.create();
+
+		this.svg.element.setAttribute('viewBox', [0, 0, this.size, this.size].join(' '));
 		this.outerCircle = this.svg.createElement('circle', this.outerCircle);
 		this.innerCircle = this.svg.createElement('circle', this.innerCircle);
 		this.group = this.svg.createElement('g');
+
+		parent.appendChild(this.svg.element);
+	},
+
+	updateSize: function(){
+		// update arcs
+		this.arcs.forEach(function(arc, index){
+			this.updateArc(index);
+		}, this);
+
+		this.iconContainers.forEach(function(iconContainer, index){
+			iconContainer.update('transform', 'rotate('+ [
+				360 / this.values.length / 2,
+				this.size / 2 + this.iconSize / 2,
+				this.size / 2 + this.iconSize / 2
+			].join(' ') +')');
+		}, this);
+	},
+
+	createCircles: function(){
+		var size = this.size;
+		var availableWidth = size - this.padding * 2 - this.activedArc.outerMove * 2 - this.arc.borderWidth;
+		var radius = availableWidth / 2;
+		var x = radius + this.activedArc.outerMove + this.arc.borderWidth / 2 + this.padding;
+		var y = radius + this.activedArc.outerMove + this.arc.borderWidth / 2 + this.padding;
+
+		this.outerCircle.assign({
+			cx: x,
+			cy: y,
+			radius: radius
+		});
+
+		this.innerCircle.assign({
+			cx: this.outerCircle.cx,
+			cy: this.outerCircle.cy,
+			radius: this.outerCircle.radius - this.arcSize
+		});
+
+		this.svg.element.appendChild(this.outerCircle.element);
+		this.svg.element.appendChild(this.innerCircle.element);
+	},
+
+	createParts: function(){
+		var count = this.values.length;
+		var step = 360 / count;
+
+		this.parts = this.values.map(function(value, index){
+			var degrees = index * step;
+			var part = this.svg.createElement('a', {
+				'transform': 'rotate('+ [-degrees, this.size / 2, this.size / 2].join(' ') +')',
+			});
+
+			this.group.element.appendChild(part.element);
+
+			return part;
+		}, this);
+	},
+
+	createArcs: function(){
+		var count = this.values.length;
+		var step = 360 / count;
+
+		this.arcs = this.parts.map(function(part, index){
+			var arc = this.svg.createElement('path', this.arc);
+
+			/*
+			var startDegrees = index * step;
+			var endDegrees = index + 1 === count ? 0 : (index + 1) * step;
+			arc.startDegrees =  startDegrees;
+			arc.endDegrees = endDegrees;
+			*/
+
+			arc.setAttribute('grade', this.values[index].grade);
+			arc.startDegrees = 0;
+			arc.endDegrees = step;
+			part.element.appendChild(arc.element);
+
+			return arc;
+		}, this);
+	},
+
+	createSymbols: function(){
+		this.symbolGroup = this.svg.createElement('g');
+		this.symbols = this.values.map(function(value, index){
+			var symbol =  this.svg.createElement('symbol', {
+				id: 'icon-' + index,
+				viewBox: value.viewBox || '0 0 100 100'
+			});
+
+			var use = this.svg.createElement('use', {
+			});
+
+			use.element.setAttributeNS(
+				'http://www.w3.org/1999/xlink',
+				'xlink:href',
+				value.icon
+			);
+
+			symbol.element.appendChild(use.element);
+			this.symbolGroup.element.appendChild(symbol.element);
+
+			return symbol;
+		}, this);
+
+		this.svg.element.appendChild(this.symbolGroup.element);
+		this.svg.element.appendChild(this.group.element);
+	},
+
+	createIconContainers: function(){
+		var availableRadius = this.outerCircle.radius - this.innerCircle.radius;
+	 	var iconSize = this.iconSize;
+	 	var iconX = this.size / 2 - iconSize / 2;
+	 	var iconY = availableRadius - iconSize / 2;
+
+		this.iconContainers = this.parts.map(function(part, index){
+			var use = this.svg.createElement('use', {
+				x: iconX,
+				y: iconY,
+				width: iconSize,
+				height: iconSize
+			});
+
+			use.element.setAttributeNS(
+				"http://www.w3.org/1999/xlink",
+				'xlink:href',
+				'#icon-' + index
+			);
+
+			part.element.appendChild(use.element);
+
+			return use;
+		}, this);
 	},
 
 	setValues: function(values){
 		this.values = values;
+		this.createCircles();
+		this.createParts();
+		this.createArcs();
+		this.createSymbols();
+		this.createIconContainers();
 
-		var step = 360 / values.length;
-		this.arcs = this.values.map(function(value, index){
-			var startDegrees = index * step;
-			var endDegrees = index + 1 === values.length ? 0 : (index + 1) * step;
-			var arc = this.svg.createElement('path', this.arc);
-
-			arc.startDegrees =  startDegrees;
-			arc.endDegrees = endDegrees;
-
-			return arc;
-		}, this);
+		this.updateSize();
 	},
 
 	createArcPath: function(x, y, innerRadius, outerRadius, degreeStart, degreeEnd){
@@ -164,7 +320,7 @@ var DonutGraph = {
 
 	getArcPath: function(arc){
 		return this.createArcPath(
-			this.innerCircle.x, this.innerCircle.y,
+			this.innerCircle.cx, this.innerCircle.cy,
 			this.innerCircle.radius,
 			this.outerCircle.radius,
 			arc.startDegrees, arc.endDegrees
@@ -173,7 +329,7 @@ var DonutGraph = {
 
 	getActivedArcPath: function(arc){
 		return this.createArcPath(
-			this.innerCircle.x, this.innerCircle.y,
+			this.innerCircle.cx, this.innerCircle.cy,
 			this.innerCircle.radius - this.activedArc.innerMove,
 			this.outerCircle.radius + this.activedArc.outerMove,
 			arc.startDegrees, arc.endDegrees
@@ -185,10 +341,10 @@ var DonutGraph = {
 		var value = this.values[index];
 
 		if( value.disabled ){
-			arc.assign(this.disabledArc);
+			arc.setAttribute('disabled', 'disabled');
 		}
 		else{
-			arc.update('backgroundColor', value.color);
+			arc.removeAttribute('disabled', 'disabled');
 		}
 
 		if( value.active ){
@@ -217,46 +373,5 @@ var DonutGraph = {
 	disableArc: function(index){
 		this.values[index].disabled = true;
 		this.updateArc(index);
-	},
-
-	updateSize: function(){
-		this.svg.element.setAttribute('viewBox', [0, 0, this.size, this.size].join(' '));
-
-		var size = this.size;
-		var availableWidth = size - this.padding * 2 - this.activedArc.outerMove * 2 - this.arc.borderWidth;
-		var radius = availableWidth / 2;
-		var x = radius + this.activedArc.outerMove + this.arc.borderWidth / 2 + this.padding;
-		var y = radius + this.activedArc.outerMove + this.arc.borderWidth / 2 + this.padding;
-
-		this.outerCircle.assign({
-			x: x,
-			y: y,
-			radius: radius
-		});
-
-		this.innerCircle.assign({
-			x: this.outerCircle.x,
-			y: this.outerCircle.y,
-			radius: this.outerCircle.radius - this.arc.size
-		});
-
-		// update arcs
-		this.arcs.forEach(function(arc, index){
-			this.updateArc(index);
-		}, this);
-	},
-
-	draw: function(){
-		this.updateSize();
-
-		var svgElement = this.svg.element;
-
-		svgElement.appendChild(this.outerCircle.element);
-		svgElement.appendChild(this.innerCircle.element);
-		var groupElement = this.group.element;
-		this.arcs.forEach(function(arc){
-			groupElement.appendChild(arc.element);
-		});
-		svgElement.appendChild(groupElement);
 	}
 };
